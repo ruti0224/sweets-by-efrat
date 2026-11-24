@@ -5,6 +5,8 @@ import com.example.cakesmenagement.JWT.JwtUtil;
 import com.example.cakesmenagement.Repositories.*;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -81,11 +83,18 @@ public class AdminService {
         return orders;
     }
     public List<Orders> getOrdersByUserCode(int userId) {
-        List<Orders> orders = orderRepo.findByUser_Code(userId);
-        if (orders.isEmpty()) {
-            System.out.println("No orders found for user code: " + userId);
+        Users user = usersRepo.findById(userId)
+                .orElseThrow(() -> new RuntimeException("משתמש לא נמצא"));
+
+        // אבטחה: לקוחה רשאית לצפות רק בהזמנות של עצמה; מנהלת רשאית לצפות בכולן
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isAdmin && !user.getEmail().equalsIgnoreCase(auth.getName())) {
+            throw new RuntimeException("אין לך הרשאה לצפות בהזמנות של משתמש אחר");
         }
-        return orders;
+
+        return orderRepo.findByUser_Code(userId);
     }
     public void updateOrderStatus(int orderId, Orders.OrderStatus newStatus) {
         // 1. מציאת ההזמנה

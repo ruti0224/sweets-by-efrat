@@ -48,7 +48,7 @@ public class OrdersController {
         adminService.updateOrder(id, order);
     }
 
-    // ✅ התיקון הקריטי: הוצאנו את המילה /admin/ מהנתיב כדי שלקוחות יוכלו לצפות בהזמנות שלהם ללא שגיאת 403!
+    // הזמנות של משתמשת: לקוחה רואה רק את שלה, מנהלת רואה הכול (הבדיקה מתבצעת ב-Service)
     @GetMapping("/user/{userId}")
     public List<Orders> getByUser(@PathVariable int userId) {
         return adminService.getOrdersByUserCode(userId);
