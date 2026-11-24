@@ -1,0 +1,146 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-gold: var(--gold);
+  --color-espresso: var(--espresso);
+  --color-cream: var(--cream);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --font-display: "Heebo", "Assistant", serif;
+  --font-body: "Heebo", "Assistant", system-ui, sans-serif;
+}
+
+:root {
+  --radius: 0.875rem;
+  
+  /* --- הצבעים שדגמת הוטמעו כאן --- */
+  
+  /* Soft cream background - הרקע הרך והורדרד שלך */
+  --background: rgb(252, 233, 232);
+  --foreground: oklch(0.25 0.03 40);
+
+  --card: rgb(255, 245, 245); /* טיפה יותר בהיר מהרקע כדי שכרטיסים יבלטו */
+  --card-foreground: oklch(0.25 0.03 40);
+  --popover: rgb(252, 233, 232);
+  --popover-foreground: oklch(0.25 0.03 40);
+
+  /* Espresso brown - נשאר כהה כדי שהטקסטים יהיו קריאים */
+  --primary: oklch(0.32 0.04 45);
+  --primary-foreground: rgb(252, 233, 232);
+
+  /* Warm cream secondary */
+  --secondary: rgb(245, 220, 220);
+  --secondary-foreground: oklch(0.32 0.04 45);
+
+  --muted: rgb(245, 220, 220);
+  --muted-foreground: oklch(0.48 0.03 50);
+
+  /* Gold accent - הזהב היוקרתי שלך */
+  --accent: rgb(216, 158, 93);
+  --accent-foreground: oklch(0.25 0.04 45);
+
+  --destructive: oklch(0.55 0.2 25);
+  --destructive-foreground: rgb(252, 233, 232);
+
+  --border: rgb(230, 205, 205);
+  --input: rgb(240, 215, 215);
+  --ring: rgb(216, 158, 93);
+
+  --gold: rgb(216, 158, 93);
+  --espresso: rgb(142, 105, 62);
+  --cream: rgb(252, 233, 232);
+
+  --sidebar: rgb(252, 233, 232);
+  --sidebar-foreground: oklch(0.28 0.04 40);
+  --sidebar-primary: oklch(0.32 0.04 45);
+  --sidebar-primary-foreground: rgb(252, 233, 232);
+  --sidebar-accent: rgb(245, 220, 220);
+  --sidebar-accent-foreground: oklch(0.28 0.04 40);
+  --sidebar-border: rgb(230, 205, 205);
+  --sidebar-ring: rgb(216, 158, 93);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    direction: rtl;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-body);
+    /* גרדיאנט עדין שמשתלב עם הצבע הרקע שדגמת */
+    background-image:
+      radial-gradient(at 10% 0%, rgba(216, 158, 93, 0.15) 0px, transparent 50%),
+      radial-gradient(at 90% 100%, rgba(216, 158, 93, 0.1) 0px, transparent 50%);
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer utilities {
+  .text-gold { color: var(--gold); }
+  .bg-gold { background-color: var(--gold); }
+  .border-gold { border-color: var(--gold); }
+  .text-espresso { color: var(--espresso); }
+  .bg-espresso { background-color: var(--espresso); }
+  
+  .gradient-gold {
+    background-image: linear-gradient(135deg, rgb(216, 158, 93), rgb(190, 130, 60));
+  }
+  .text-gradient-gold {
+    background-image: linear-gradient(135deg, rgb(216, 158, 93), rgb(180, 120, 50));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .shadow-elegant {
+    box-shadow: 0 10px 40px -15px oklch(0.3 0.05 40 / 0.15), 0 2px 8px -2px oklch(0.3 0.05 40 / 0.05);
+  }
+  .shadow-gold {
+    box-shadow: 0 8px 30px -10px rgba(216, 158, 93, 0.4);
+  }
+}

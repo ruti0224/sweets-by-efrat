@@ -1,0 +1,235 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Pencil, Plus, Trash2 } from "lucide-react";
+import { cakeService } from "@/services/cakeService";
+import { categoryService } from "@/services/categoryService";
+import type { Cake, Category } from "@/types";
+import { extractError } from "@/lib/api";
+import { toast } from "sonner";
+import { CakeDetailsModal } from "@/components/cakes/CakeDetailsModal";
+
+export const Route = createFileRoute("/admin/cakes")({
+  component: AdminCakes,
+});
+
+const empty: Partial<Cake> = {
+  name: "", description: "", price: 0, ingredients: "", imageUrl: "", isActive: true,
+};
+
+function AdminCakes() {
+  const [cakes, setCakes] = useState<Cake[]>([]);
+  const [cats, setCats] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [delId, setDelId] = useState<number | null>(null);
+  const [form, setForm] = useState<Partial<Cake>>(empty);
+  const [detailsCake, setDetailsCake] = useState<Cake | null>(null);
+  const editing = !!form.id && cakes.some((c) => c.id === form.id);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const url = await cakeService.uploadImage(file);
+      setForm((prev) => ({ ...prev, imageUrl: url }));
+      toast.success("התמונה הועלתה בהצלחה");
+    } catch (err) {
+      toast.error(extractError(err, "שגיאה בהעלאת התמונה"));
+    } finally {
+      setUploading(false);
+    }
+  };
+  const refresh = async () => {
+    setLoading(true);
+    try {
+      const [c, k] = await Promise.all([cakeService.getAll(), categoryService.getAll().catch(() => [])]);
+      setCakes(c);
+      setCats(k);
+    } catch (e) {
+      toast.error(extractError(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, []);
+
+  const openEdit = (c: Cake) => {
+    setForm({
+      id: c.id, name: c.name ?? "", description: c.description ?? "", price: c.price ?? 0,
+      ingredients: c.ingredients ?? "", imageUrl: c.imageUrl ?? "", isActive: !!c.isActive, category: c.category ?? null,
+    });
+    setOpen(true);
+  };
+
+  const save = async () => {
+    try {
+      if (editing && form.id) { await cakeService.update(form.id, form); toast.success("עודכן"); }
+      else { await cakeService.add(form); toast.success("נוסף"); }
+      setOpen(false); setForm(empty); refresh();
+    } catch (e) { toast.error(extractError(e, "שגיאה")); }
+  };
+
+  const toggleActive = async (c: Cake) => {
+    try {
+      const updated = await cakeService.update(c.id, { ...c, isActive: !c.isActive });
+      setCakes((prev) => prev.map((x) => (x.id === c.id ? { ...x, isActive: updated.isActive } : x)));
+    } catch (e) { toast.error(extractError(e)); }
+  };
+
+  const confirmDelete = async () => {
+    if (!delId) return;
+    try { await cakeService.remove(delId); toast.success("נמחק"); setDelId(null); refresh(); }
+    catch (e) { toast.error(extractError(e)); }
+  };
+
+  return (
+    // החסימה של w-full ו-overflow-hidden מבטיחה שהכרטיסים לא יברחו הצידה
+    <div className="space-y-5 sm:space-y-6 w-full max-w-full overflow-hidden">
+      <div className="flex items-center justify-between">
+        <h1 className="font-display text-2xl sm:text-3xl font-bold text-espresso">ניהול עוגות</h1>
+        <Button onClick={() => { setForm(empty); setOpen(true); }} className="bg-espresso text-sm px-3 sm:px-4 shrink-0">
+          <Plus className="ml-1 sm:ml-2 h-4 w-4" /> חדשה
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-8">טוען...</div>
+      ) : cakes.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground">אין עוגות</div>
+      ) : (
+        <>
+          <Card className="hidden md:block overflow-hidden border border-border/50">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-right">תמונה</TableHead>
+                  <TableHead className="text-right">שם</TableHead>
+                  <TableHead className="text-right">קטגוריה</TableHead>
+                  <TableHead className="text-right">מחיר</TableHead>
+                  <TableHead className="text-right">זמין</TableHead>
+                  <TableHead className="text-right">פעולות</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {cakes.map((c) => (
+                  <TableRow key={c.id} className="cursor-pointer hover:bg-secondary/40" onClick={() => setDetailsCake(c)}>
+                    <TableCell><img src={c.imageUrl} alt={c.name} className="h-12 w-12 rounded-md object-cover bg-muted" /></TableCell>
+                    <TableCell className="font-medium">{c.name}</TableCell>
+                    <TableCell>{c.category?.name ?? "—"}</TableCell>
+                    <TableCell className="text-gold font-bold">₪{c.price}</TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-2">
+                        <Switch checked={!!c.isActive} onCheckedChange={() => toggleActive(c)} />
+                        <span className="text-xs text-muted-foreground">{c.isActive ? "זמין" : "לא זמין"}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <div className="flex gap-1">
+                        <Button size="icon" variant="ghost" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
+                        <Button size="icon" variant="ghost" className="text-destructive" onClick={() => setDelId(c.id)}><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+
+          {/* מובייל: כרטיסיות תקינות בגודלן */}
+          <div className="md:hidden flex flex-col gap-3 w-full">
+            {cakes.map((c) => (
+              <Card key={c.id} className="p-3.5 flex flex-col gap-3 w-full border border-border/50 shadow-sm" onClick={() => setDetailsCake(c)}>
+                <div className="flex items-start gap-3 w-full">
+                  <img src={c.imageUrl} alt={c.name} className="h-16 w-16 rounded-md object-cover bg-muted shrink-0" />
+                  <div className="flex-1 min-w-0 flex flex-col justify-between h-16">
+                    <h3 className="font-bold text-base text-espresso truncate w-full">{c.name}</h3>
+                    <div className="flex items-end justify-between w-full">
+                      <span className="text-xs text-muted-foreground truncate">{c.category?.name ?? "—"}</span>
+                      <span className="text-gold font-bold text-base">₪{c.price}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2.5 border-t border-border/50 w-full" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center gap-2">
+                    <Switch checked={!!c.isActive} onCheckedChange={() => toggleActive(c)} className="scale-90" />
+                    <Label className="text-xs">{c.isActive ? "זמין" : "לא זמין"}</Label>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
+                    <Button size="sm" variant="ghost" className="h-8 px-2 text-destructive" onClick={() => setDelId(c.id)}><Trash2 className="h-4 w-4" /></Button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* מודלים ללא שינוי - רק וידוא גודל מקסימלי */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent dir="rtl" className="w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>{editing ? "עריכת עוגה" : "עוגה חדשה"}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5"><Label>שם</Label><Input value={form.name || ""} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+            <div className="space-y-1.5"><Label>תיאור</Label><Textarea value={form.description || ""} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
+            <div className="space-y-1.5"><Label>מחיר</Label><Input type="number" value={form.price ?? 0} onChange={(e) => setForm({ ...form, price: +e.target.value })} /></div>
+            <div className="space-y-1.5"><Label>מרכיבים</Label><Textarea value={form.ingredients ?? ""} onChange={(e) => setForm({ ...form, ingredients: e.target.value })} /></div>
+            <div className="space-y-1.5">
+              <Label>תמונת העוגה</Label>
+              {form.imageUrl && (
+                <img src={form.imageUrl} alt="תצוגה מקדימה" className="h-32 w-32 rounded-lg object-cover border border-border/50 mb-2" />
+              )}
+              <Input type="file" accept="image/png, image/jpeg, image/webp" onChange={handleFileSelect} disabled={uploading} />
+              {uploading && <p className="text-xs text-muted-foreground">מעלה תמונה...</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label>קטגוריה</Label>
+              <Select value={form.category?.categoryCode ? String(form.category.categoryCode) : ""} onValueChange={(v) => {
+                const cat = cats.find((c) => c.categoryCode === +v); setForm({ ...form, category: cat ?? null });
+              }}>
+                <SelectTrigger><SelectValue placeholder="בחר קטגוריה" /></SelectTrigger>
+                <SelectContent>{cats.map((c) => (<SelectItem key={c.categoryCode} value={String(c.categoryCode)}>{c.name}</SelectItem>))}</SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2 pt-2">
+              <Switch checked={!!form.isActive} onCheckedChange={(v) => setForm({ ...form, isActive: v })} />
+              <Label>זמין למכירה</Label>
+            </div>
+          </div>
+          <DialogFooter><Button onClick={save} className="bg-espresso w-full mt-4 sm:w-auto">שמירה</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {detailsCake && <CakeDetailsModal cake={detailsCake} open={!!detailsCake} onOpenChange={(o) => !o && setDetailsCake(null)} />}
+      <AlertDialog open={delId !== null} onOpenChange={(o) => !o && setDelId(null)}>
+        <AlertDialogContent dir="rtl" className="w-[90vw] sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>למחוק עוגה?</AlertDialogTitle>
+            <AlertDialogDescription>הפעולה אינה הפיכה.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="mt-0">ביטול</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive">מחיקה</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
